@@ -110,7 +110,7 @@ class __FormContentState extends State<_FormContent> {
   @override
   void initState() {
     super.initState();
-    _loadRememberMePreference();
+    _loadRememberedCredentials();
   }
 
   @override
@@ -120,6 +120,27 @@ class __FormContentState extends State<_FormContent> {
     super.dispose();
   }
 
+  Future<void> _loadRememberedCredentials() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _emailController.text = prefs.getString('email') ?? '';
+      _passwordController.text = prefs.getString('password') ?? '';
+      _rememberMe = prefs.getBool('remember_me') ?? false;
+    });
+  }
+
+  Future<void> _saveRememberedCredentials() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString('email', _emailController.text);
+      await prefs.setString('password', _passwordController.text);
+    } else {
+      await prefs.remove('email');
+      await prefs.remove('password');
+    }
+    await prefs.setBool('remember_me', _rememberMe);
+  }
+
   Future<void> _signIn() async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
@@ -127,6 +148,7 @@ class __FormContentState extends State<_FormContent> {
           email: _emailController.text,
           password: _passwordController.text,
         );
+        await _saveRememberedCredentials();
         if (!mounted) return; // Ensures `context` is still valid
         Navigator.pushReplacement(
           context,
@@ -139,18 +161,6 @@ class __FormContentState extends State<_FormContent> {
         );
       }
     }
-  }
-
-  Future<void> _loadRememberMePreference() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _rememberMe = prefs.getBool('remember_me') ?? false;
-    });
-  }
-
-  Future<void> _saveRememberMePreference(bool value) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('remember_me', value);
   }
 
   @override
@@ -241,7 +251,7 @@ class __FormContentState extends State<_FormContent> {
                   setState(() {
                     _rememberMe = value;
                   });
-                  _saveRememberMePreference(value);
+                  _saveRememberedCredentials();
                 },
                 title: const Text('Remember me'),
                 controlAffinity: ListTileControlAffinity.leading,
@@ -291,7 +301,6 @@ class __FormContentState extends State<_FormContent> {
     );
   }
 }
-
 
 
 /*import 'package:flutter/material.dart';
