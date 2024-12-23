@@ -4,6 +4,7 @@ import 'package:hobby/Screens/Blogging.dart';
 import 'package:hobby/Screens/Home.dart';
 import 'package:hobby/Screens/Intro.dart';
 import 'package:hobby/Screens/News.dart';
+import 'package:hobby/Screens/Profile.dart';
 import 'package:hobby/Screens/Shopping.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -106,10 +107,15 @@ class _BottomBarState extends State<BottomBar> {
               leading: const Icon(Icons.person),
               title: const Text('Profile'),
               onTap: () {
-                // Handle Profile navigation here
-                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  ),
+                );
               },
             ),
+
             // Hobbies Item with Expansion
             ExpansionTile(
               leading: const Icon(Icons.favorite),
