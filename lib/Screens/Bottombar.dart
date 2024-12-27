@@ -7,6 +7,7 @@ import 'package:hobby/Screens/News.dart';
 import 'package:hobby/Screens/Profile.dart';
 import 'package:hobby/Screens/ShoppingScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hobby/Screens/SettingsScreen.dart';
 
 class BottomBar extends StatefulWidget {
   const BottomBar({super.key});
@@ -24,6 +25,7 @@ class _BottomBarState extends State<BottomBar> {
     const BloggingScreen(),
     const NewsScreen(),
     const ShoppingScreen(),
+    const SettingsScreen(),
   ];
 
   void _onTappedIndex(int index) {
@@ -44,7 +46,7 @@ class _BottomBarState extends State<BottomBar> {
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Hobby'),
-        backgroundColor: Colors.deepPurple[50],
+        backgroundColor: Colors.deepPurple[200],
         leading: Builder(
           builder: (context) => GestureDetector(
             onTap: () => Scaffold.of(context).openDrawer(),
@@ -116,48 +118,17 @@ class _BottomBarState extends State<BottomBar> {
               },
             ),
 
-            // Hobbies Item with Expansion
-            ExpansionTile(
-              leading: const Icon(Icons.favorite),
-              title: const Text('Hobbies'),
-              children: [
-                ListTile(
-                  title: const Text('All Hobbies'),
-                  onTap: () {
-                    // Handle All Hobbies navigation
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Football'),
-                  onTap: () {
-                    // Handle Football navigation
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Cinema'),
-                  onTap: () {
-                    // Handle Cinema navigation
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Economy'),
-                  onTap: () {
-                    // Handle Economy navigation
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
             // Settings Item
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
               onTap: () {
                 // Handle Settings navigation here
-                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const SettingsScreen()),
+                );
               },
             ),
           ],
@@ -167,6 +138,7 @@ class _BottomBarState extends State<BottomBar> {
         child: _pages[_selectedIndex],
       ),
       bottomNavigationBar: BottomAppBar(
+        height: 60,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           color: Colors.deepPurple[50],
