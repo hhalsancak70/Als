@@ -15,41 +15,37 @@ class _NewsScreenState extends State<NewsScreen> {
   List<NewsModel> articles = [];
   List<CategoryModel> categories = [];
   bool isLoading = true;
-
-  getNews() async {
-    NewsApi newsApi = NewsApi();
-    await newsApi.getNews();
-    articles = newsApi.dataStore;
-    setState(() {
-      isLoading = false;
-    });
-  }
+  bool _mounted = true;
 
   @override
   void initState() {
-    getNews();
     super.initState();
+    getNews();
   }
 
   @override
   void dispose() {
-    // Timer'ı veya subscription'ları temizle
+    _mounted = false;
     super.dispose();
   }
 
-  void someFunction() {
-    if (!mounted) return; // mounted kontrolü ekle
-    setState(() {
-      // state değişiklikleri
-    });
-  }
-
-  Future<void> someAsyncFunction() async {
-    // ... işlemler
-    if (!mounted) return; // mounted kontrolü ekle
-    setState(() {
-      // state değişiklikleri
-    });
+  Future<void> getNews() async {
+    try {
+      NewsApi newsApi = NewsApi();
+      await newsApi.getNews();
+      if (_mounted) {
+        setState(() {
+          articles = newsApi.dataStore;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (_mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override

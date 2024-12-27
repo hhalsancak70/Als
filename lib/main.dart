@@ -126,13 +126,61 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'Hobby',
           theme: ThemeData(
+            // Ana renkler
             primarySwatch: Colors.deepPurple,
-            appBarTheme: const AppBarTheme(
+            primaryColor: Colors.deepPurple,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              primary: Colors.deepPurple,
+              secondary: Colors.deepOrange,
+              background: Colors.grey[50]!,
+            ),
+
+            // AppBar teması
+            appBarTheme: AppBarTheme(
+              backgroundColor: Colors.deepPurple.shade50,
+              foregroundColor: Colors.deepPurple,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: Colors.deepPurple),
+            ),
+
+            // Bottom Navigation teması
+            bottomNavigationBarTheme: BottomNavigationBarThemeData(
+              backgroundColor: Colors.deepPurple.shade50,
+              selectedItemColor: Colors.deepOrange,
+              unselectedItemColor: Colors.deepPurple,
+            ),
+
+            // FloatingActionButton teması
+            floatingActionButtonTheme: const FloatingActionButtonThemeData(
               backgroundColor: Colors.deepPurple,
               foregroundColor: Colors.white,
             ),
-            bottomAppBarTheme: const BottomAppBarTheme(
-              color: Colors.deepPurple,
+
+            // Card teması
+            cardTheme: CardTheme(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+
+            // Buton teması
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+
+            // Chip teması
+            chipTheme: ChipThemeData(
+              backgroundColor: Colors.deepPurple.shade50,
+              selectedColor: Colors.deepPurple.shade200,
+              labelStyle: const TextStyle(color: Colors.deepPurple),
             ),
           ),
           darkTheme: ThemeData.dark().copyWith(
