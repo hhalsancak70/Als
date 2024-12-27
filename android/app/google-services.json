@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "924421466170",
+    "firebase_url": "https://hobby-556fd-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "hobby-556fd",
     "storage_bucket": "hobby-556fd.firebasestorage.app"
   },
@@ -12,7 +13,12 @@
           "package_name": "com.example.hobby"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "924421466170-po582hsradvkcqgee21ap6i8fcd5la65.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDPRERkJA7GWWk1UQLh47o6DaNfKGERfh0"
@@ -20,7 +26,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "924421466170-po582hsradvkcqgee21ap6i8fcd5la65.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

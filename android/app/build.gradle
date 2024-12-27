@@ -33,7 +33,6 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         resValue "string", "server_client_id", "YOUR_SERVER_CLIENT_ID"
-        resValue "string", "default_web_client_id", "YOUR_WEB_CLIENT_ID"
         multiDexEnabled true
     }
 

@@ -83,9 +83,27 @@ void main() async {
 
   // Ön plandaki mesajları dinle
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    if (message.notification?.title?.isNotEmpty ?? false) {
-      // Yerel bildirim göster
-      showFlutterNotification(message);
+    print('Ön plan mesajı alındı: ${message.notification?.title}');
+    if (message.notification != null) {
+      flutterLocalNotificationsPlugin.show(
+        message.hashCode,
+        message.notification?.title,
+        message.notification?.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            channel.id,
+            channel.name,
+            channelDescription: channel.description,
+            icon: 'launch_background',
+            importance: Importance.high,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+      );
     }
   });
 

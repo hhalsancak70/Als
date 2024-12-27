@@ -1,10 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hobby/Screens/PostingScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hobby/Model/feed_item.dart'; // PostUser sınıfı için import
 import 'package:hobby/Screens/PhotoCommentScreen.dart';
+import 'package:hobby/Screens/UserProfileScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -176,19 +176,33 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Hobby',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.deepPurple.shade50,
+        elevation: 0,
+      ),
       body: Column(
         children: [
           // Hobi filtreleri
           Container(
             height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.shade50,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
+            ),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               itemCount: _defaultHobbies.length,
               itemBuilder: (context, index) {
                 final hobby = _defaultHobbies[index];
                 final isSelected = _selectedHobbyFilter == hobby['id'];
-
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: FilterChip(
@@ -199,14 +213,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         _selectedHobbyFilter = selected ? hobby['id'] : null;
                       });
                     },
-                    selectedColor: Colors.deepPurple.shade100,
-                    checkmarkColor: Colors.deepPurple,
+                    selectedColor: Colors.deepPurple.shade200,
+                    checkmarkColor: Colors.white,
+                    backgroundColor: Colors.white,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : Colors.deepPurple,
+                    ),
                   ),
                 );
               },
             ),
           ),
-          // Mevcut liste görünümü
+
+          // Post listesi
           Expanded(
             child: StreamBuilder<List<FeedItem>>(
               stream: _getFeedItems(),
@@ -221,153 +240,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 final feedItems = snapshot.data ?? [];
 
-                return ListView.separated(
-                  itemCount: feedItems.length,
-                  separatorBuilder: (BuildContext context, int index) {
-                    return const Divider();
-                  },
-                  itemBuilder: (BuildContext context, int index) {
-                    final item = feedItems[index];
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _AvatarImage(item.user.imageUrl ??
-                              'https://via.placeholder.com/80'),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: RichText(
-                                        overflow: TextOverflow.ellipsis,
-                                        text: TextSpan(
-                                          children: [
-                                            TextSpan(
-                                              text: item.user.fullName,
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                  color: Colors.black),
-                                            ),
-                                            TextSpan(
-                                              text: " @${item.user.userName}",
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                        '· ${_getTimeDifference(item.createdAt)}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium),
-                                    const Padding(
-                                      padding: EdgeInsets.only(left: 8.0),
-                                      child: Icon(Icons.more_horiz),
-                                    )
-                                  ],
-                                ),
-                                Text(item.content),
-                                if (item.imageUrl != null)
-                                  Container(
-                                    height: 250,
-                                    margin: const EdgeInsets.only(top: 8.0),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      image: DecorationImage(
-                                        fit: BoxFit.cover,
-                                        image: item.isLocalMedia
-                                            ? FileImage(File(item.imageUrl!))
-                                            : NetworkImage(item.imageUrl!)
-                                                as ImageProvider,
-                                      ),
-                                    ),
-                                  ),
-                                // Buttons below the image
-                                const SizedBox(
-                                    height:
-                                        8), // Spacing between image and buttons
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '${item.likesCount}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.deepPurple,
-                                          ),
-                                        ),
-                                        StreamBuilder<DocumentSnapshot>(
-                                          stream: FirebaseFirestore.instance
-                                              .collection('likes')
-                                              .doc(
-                                                  '${item.id}_${FirebaseAuth.instance.currentUser?.uid}')
-                                              .snapshots(),
-                                          builder: (context, snapshot) {
-                                            final isLiked = snapshot.hasData &&
-                                                snapshot.data!.exists;
-                                            return IconButton(
-                                              icon: Icon(
-                                                isLiked
-                                                    ? Icons.favorite
-                                                    : Icons.favorite_border,
-                                                color: Colors.deepPurple,
-                                              ),
-                                              onPressed: () =>
-                                                  _toggleLike(item.id),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.comment_outlined,
-                                          color: Colors.deepPurple),
-                                      onPressed: () =>
-                                          _showCommentDialog(item.id),
-                                    ),
-                                    TextButton.icon(
-                                      icon: const Icon(Icons.comment,
-                                          color: Colors.deepPurple),
-                                      label: const Text(
-                                        'Yorumları Gör',
-                                        style:
-                                            TextStyle(color: Colors.deepPurple),
-                                      ),
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                PhotoCommentScreen(
-                                              postId: item.id,
-                                              imageUrl: item.imageUrl!,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                if (feedItems.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.post_add, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Henüz gönderi yok',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
                           ),
-                        ],
-                      ),
-                    );
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    setState(() {});
                   },
+                  child: ListView.builder(
+                    itemCount: feedItems.length,
+                    padding: const EdgeInsets.only(top: 8),
+                    itemBuilder: (context, index) {
+                      final item = feedItems[index];
+                      return _buildPostCard(item);
+                    },
+                  ),
                 );
               },
             ),
@@ -378,31 +281,173 @@ class _HomeScreenState extends State<HomeScreen> {
         onPressed: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const PostingScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const PostingScreen()),
           );
         },
-        child: const Icon(Icons.add),
+        backgroundColor: Colors.deepPurple,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
-}
 
-class _AvatarImage extends StatelessWidget {
-  final String url;
-  const _AvatarImage(this.url);
+  Widget _buildPostCard(FeedItem item) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Kullanıcı bilgileri
+          ListTile(
+            leading: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        UserProfileScreen(userId: item.user.id),
+                  ),
+                );
+              },
+              child: CircleAvatar(
+                backgroundImage: NetworkImage(
+                  item.user.imageUrl ?? 'assets/Images/default_avatar.png',
+                ),
+                onBackgroundImageError: (_, __) =>
+                    const AssetImage('Images/default_avatar.png'),
+              ),
+            ),
+            title: Text(
+              item.user.fullName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(_getTimeDifference(item.createdAt)),
+            trailing: IconButton(
+              icon: const Icon(Icons.more_vert),
+              onPressed: () {}, // Menü için
+            ),
+          ),
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 30,
-      height: 30,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        image: DecorationImage(
-          image: NetworkImage(url),
-        ),
+          // İçerik
+          if (item.content.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(item.content),
+            ),
+
+          // Fotoğraf
+          if (item.imageUrl != null)
+            Container(
+              constraints: const BoxConstraints(
+                maxHeight: 400,
+              ),
+              width: double.infinity,
+              child: Image.network(
+                item.imageUrl!,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    height: 300,
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.deepPurple),
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 300,
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: Icon(
+                        Icons.error_outline,
+                        color: Colors.grey,
+                        size: 50,
+                      ),
+                    ),
+                  );
+                },
+                cacheWidth: 800, // Resim önbelleğe alınırken boyutunu sınırla
+              ),
+            ),
+
+          // Etkileşim butonları
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                // Beğeni butonu
+                Row(
+                  children: [
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('likes')
+                          .doc(
+                              '${item.id}_${FirebaseAuth.instance.currentUser?.uid}')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        final isLiked =
+                            snapshot.hasData && snapshot.data!.exists;
+                        return IconButton(
+                          icon: Icon(
+                            isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: Colors.deepPurple,
+                          ),
+                          onPressed: () => _toggleLike(item.id),
+                        );
+                      },
+                    ),
+                    Text(
+                      '${item.likesCount}',
+                      style: const TextStyle(color: Colors.deepPurple),
+                    ),
+                  ],
+                ),
+
+                // Yorum butonu
+                TextButton.icon(
+                  onPressed: () => _showCommentDialog(item.id),
+                  icon: const Icon(Icons.comment_outlined,
+                      color: Colors.deepPurple),
+                  label: Text(
+                    '${item.commentsCount} Yorum',
+                    style: const TextStyle(color: Colors.deepPurple),
+                  ),
+                ),
+
+                // Yorumları görüntüle butonu
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PhotoCommentScreen(
+                          postId: item.id,
+                          imageUrl: item.imageUrl!,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.visibility, color: Colors.deepPurple),
+                  label: const Text(
+                    'Yorumları Gör',
+                    style: TextStyle(color: Colors.deepPurple),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

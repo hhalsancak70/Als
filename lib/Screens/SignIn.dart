@@ -118,7 +118,6 @@ class __FormContentState extends State<_FormContent> {
       'email',
       'profile',
     ],
-    clientId: 'YOUR_WEB_CLIENT_ID', // Web için gerekli
   );
 
   @override

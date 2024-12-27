@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore
 import 'package:firebase_auth/firebase_auth.dart'; // Firebase Authentication
+import 'package:hobby/Widgets/hobby_selection_dialog.dart';
 
 class PostingBlog extends StatefulWidget {
   const PostingBlog({super.key});
@@ -12,6 +13,7 @@ class PostingBlog extends StatefulWidget {
 class _PostingBlogState extends State<PostingBlog> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
+  String? _selectedHobby; // Hobi seçimi için ekle
 
   // Firebase Instances
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -22,32 +24,42 @@ class _PostingBlogState extends State<PostingBlog> {
 
   Future<void> _sendNotification(String title, String author) async {
     try {
-      // Tüm kullanıcılara bildirim göndermek için topic'e mesaj gönder
-      await _firestore.collection('fcm_tokens').get().then((snapshot) {
-        for (var doc in snapshot.docs) {
-          String token = doc.data()['token'];
-          _sendPushMessage(
-            token,
-            'Yeni Blog Yazısı',
-            '$author yeni bir blog paylaştı: $title',
-          );
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return;
+
+      // Tüm kullanıcıları al
+      final usersSnapshot = await _firestore.collection('users').get();
+
+      for (var userDoc in usersSnapshot.docs) {
+        // Kendine bildirim gönderme
+        if (userDoc.id != currentUser.uid) {
+          // Bildirim dokümanı oluştur
+          await _firestore.collection('notifications').add({
+            'recipientId': userDoc.id,
+            'senderId': currentUser.uid,
+            'senderName': author,
+            'type': 'blog',
+            'title': 'Yeni Blog Yazısı',
+            'body': '$author yeni bir blog paylaştı: $title',
+            'createdAt': FieldValue.serverTimestamp(),
+            'read': false,
+          });
+
+          // FCM token'ı al ve bildirim gönder
+          final userData = userDoc.data();
+          if (userData['fcmToken'] != null) {
+            await _firestore.collection('fcm_tokens').add({
+              'token': userData['fcmToken'],
+              'title': 'Yeni Blog Yazısı',
+              'body': '$author yeni bir blog paylaştı: $title',
+              'timestamp': FieldValue.serverTimestamp(),
+            });
+          }
         }
-      });
+      }
+      print('Bildirimler başarıyla gönderildi');
     } catch (e) {
       print('Bildirim gönderme hatası: $e');
-    }
-  }
-
-  Future<void> _sendPushMessage(String token, String title, String body) async {
-    try {
-      await _firestore.collection('notifications').add({
-        'token': token,
-        'title': title,
-        'body': body,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      print('Push mesajı gönderme hatası: $e');
     }
   }
 
@@ -99,6 +111,7 @@ class _PostingBlogState extends State<PostingBlog> {
         'content': _contentController.text,
         'author': author,
         'authorId': authorId,
+        'hobby': _selectedHobby, // Hobi bilgisini ekle
         'postedOn': DateTime.now().toIso8601String(),
       });
 
@@ -208,6 +221,25 @@ class _PostingBlogState extends State<PostingBlog> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final selectedHobbies = await showDialog<List<String>>(
+                        context: context,
+                        builder: (context) => const HobbySelectionDialog(),
+                      );
+
+                      if (selectedHobbies != null) {
+                        setState(() {
+                          _selectedHobby = selectedHobbies.isNotEmpty
+                              ? selectedHobbies.first
+                              : null;
+                        });
+                      }
+                    },
+                    child: Text(_selectedHobby != null
+                        ? 'Seçilen Hobi: $_selectedHobby'
+                        : 'Hobi Seç'),
+                  ),
                   Center(
                     child: ElevatedButton(
                       onPressed: _submitPost,

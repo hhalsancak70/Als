@@ -56,7 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('profile_photos')
-          .child('${_auth.currentUser!.uid}.jpg');
+          .child(_auth.currentUser!.uid);
 
       await storageRef.putFile(File(image.path));
       final photoURL = await storageRef.getDownloadURL();
@@ -64,10 +64,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Kullanıcı profilini güncelle
       await _auth.currentUser!.updatePhotoURL(photoURL);
 
-      // Firestore'da kullanıcı bilgilerini güncelle (opsiyonel)
-      await _firestore.collection('users').doc(_auth.currentUser!.uid).set({
+      // Firestore'da kullanıcı bilgilerini güncelle
+      await _firestore.collection('users').doc(_auth.currentUser!.uid).update({
         'photoURL': photoURL,
-      }, SetOptions(merge: true));
+      });
 
       setState(() => _isLoading = false);
 
@@ -77,6 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     } catch (e) {
+      print('Fotoğraf yükleme hatası: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
