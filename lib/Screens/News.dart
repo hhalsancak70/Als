@@ -32,6 +32,27 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   @override
+  void dispose() {
+    // Timer'ı veya subscription'ları temizle
+    super.dispose();
+  }
+
+  void someFunction() {
+    if (!mounted) return; // mounted kontrolü ekle
+    setState(() {
+      // state değişiklikleri
+    });
+  }
+
+  Future<void> someAsyncFunction() async {
+    // ... işlemler
+    if (!mounted) return; // mounted kontrolü ekle
+    setState(() {
+      // state değişiklikleri
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(

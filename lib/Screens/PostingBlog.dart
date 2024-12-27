@@ -20,6 +20,37 @@ class _PostingBlogState extends State<PostingBlog> {
   // Loading State
   bool _isLoading = false;
 
+  Future<void> _sendNotification(String title, String author) async {
+    try {
+      // Tüm kullanıcılara bildirim göndermek için topic'e mesaj gönder
+      await _firestore.collection('fcm_tokens').get().then((snapshot) {
+        for (var doc in snapshot.docs) {
+          String token = doc.data()['token'];
+          _sendPushMessage(
+            token,
+            'Yeni Blog Yazısı',
+            '$author yeni bir blog paylaştı: $title',
+          );
+        }
+      });
+    } catch (e) {
+      print('Bildirim gönderme hatası: $e');
+    }
+  }
+
+  Future<void> _sendPushMessage(String token, String title, String body) async {
+    try {
+      await _firestore.collection('notifications').add({
+        'token': token,
+        'title': title,
+        'body': body,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Push mesajı gönderme hatası: $e');
+    }
+  }
+
   Future<void> _submitPost() async {
     if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,6 +101,12 @@ class _PostingBlogState extends State<PostingBlog> {
         'authorId': authorId,
         'postedOn': DateTime.now().toIso8601String(),
       });
+
+      // Blog ekledikten sonra bildirim gönder
+      await _sendNotification(
+        _titleController.text,
+        user.displayName ?? 'Anonim',
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Blog posted successfully!')),
@@ -187,134 +224,3 @@ class _PostingBlogState extends State<PostingBlog> {
           );
   }
 }
-
-
-/*import 'package:hobby/Screens/Blogging.dart';
-import 'package:flutter/material.dart';
-
-class PostingBlog extends StatefulWidget {
-  const PostingBlog({super.key});
-
-  @override
-  // ignore: library_private_types_in_public_api
-  _PostingBlogState createState() => _PostingBlogState();
-}
-
-class _PostingBlogState extends State<PostingBlog> {
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
-
-  void _submitPost() {
-    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please fill in both the title and content')),
-      );
-      return;
-    }
-
-    final newPost = Article(
-      title: _titleController.text,
-      content: _contentController.text,
-      author: 'hhalsancak',
-      postedOn: 'just now',
-      isLocalMedia: true,
-    );
-
-    Navigator.pop(context, newPost);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.deepPurple[300],
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(60.0),
-        child: AppBar(
-          centerTitle: true,
-          title: const Text(
-            'H0B1',
-            style: TextStyle(
-              fontSize: 20,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          backgroundColor: Colors.deepPurple,
-          leading: IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () {
-              // Add navigation drawer functionality
-            },
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(10.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter the title of your blog:',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                hintText: "Enter blog title",
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Enter the content of your blog:',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _contentController,
-              maxLines: 15,
-              decoration: InputDecoration(
-                hintText: "Start writing your blog content",
-                hintStyle: TextStyle(color: Colors.grey[400]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Center(
-              child: ElevatedButton(
-                onPressed: _submitPost,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Submit Blog'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-*/

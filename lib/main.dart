@@ -1,78 +1,92 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:hobby/Screens/Bottombar.dart';
 import 'package:hobby/Screens/Intro.dart';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const IntroPage(),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(60.0),
-          child: AppBar(
-            centerTitle: true,
-            title: const Text(
-              'H0B1',
-              style: TextStyle(
-                fontSize: 20,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            backgroundColor: Colors.deepPurple,
-            leading: IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () {
-                // Add navigation drawer functionality
-              },
-            ),
-          ),
-        ),
-        bottomNavigationBar: const BottomBar(),
-        body: const Center(
-          child: Text('Welcome to H0B1'),
-        ),
-      ),
-    );
-  }
-}
-
-
-
-/*import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hobby/Screens/Bottombar.dart';
-import 'package:hobby/Screens/Intro.dart';
+import 'package:hobby/Screens/BottomBar.dart';
+import 'dart:io';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+// Global değişkenler
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// Bildirim kanalı
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'high_importance_channel',
+  'Yüksek Önemli Bildirimler',
+  description: 'Bu kanal önemli bildirimleri gösterir',
+  importance: Importance.high,
+);
+
+// Arka plan mesaj işleyici
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  print('Arka plan mesajı alındı: ${message.messageId}');
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Yerel bildirimleri başlat
+  await flutterLocalNotificationsPlugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: DarwinInitializationSettings(),
+    ),
+  );
+
+  // Android için bildirim kanalını oluştur
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  // Firebase'i başlat
+  await Firebase.initializeApp();
+
+  // FCM arka plan işleyicisini ayarla
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Bildirim izinlerini iste
+  final messaging = FirebaseMessaging.instance;
+  await messaging.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  // FCM token'ı al ve Firestore'a kaydet
+  String? token = await messaging.getToken();
+  if (token != null) {
+    await FirebaseFirestore.instance.collection('fcm_tokens').doc(token).set({
+      'token': token,
+      'createdAt': FieldValue.serverTimestamp(),
+      'platform': Platform.operatingSystem,
+    });
+  }
+
+  // Token yenilendiğinde güncelle
+  messaging.onTokenRefresh.listen((String newToken) async {
+    await FirebaseFirestore.instance
+        .collection('fcm_tokens')
+        .doc(newToken)
+        .set({
+      'token': newToken,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'platform': Platform.operatingSystem,
+    });
+  });
+
+  // Ön plandaki mesajları dinle
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    if (message.notification?.title?.isNotEmpty ?? false) {
+      // Yerel bildirim göster
+      showFlutterNotification(message);
+    }
+  });
+
   runApp(const MyApp());
 }
 
@@ -87,90 +101,44 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const AuthGate(),
-    );
-  }
-}
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-class AuthGate extends StatefulWidget {
-  const AuthGate({super.key});
+          // Kullanıcı oturum açmışsa
+          if (snapshot.hasData) {
+            return const BottomBar();
+          }
 
-  @override
-  _AuthGateState createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<AuthGate> {
-  @override
-  void initState() {
-    super.initState();
-    _checkUserSignInStatus();
-  }
-
-  Future<void> _checkUserSignInStatus() async {
-    // Ensure any state change or UI action happens after the build phase
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        // If the user is signed in, navigate to the BottomBar screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const BottomBar()),
-        );
-      } else {
-        // If the user is not signed in, show the IntroPage
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const IntroPage()),
-        );
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // A loading screen while checking the sign-in status
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
+          // Kullanıcı oturum açmamışsa
+          return const IntroPage();
+        },
       ),
     );
   }
 }
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(60.0),
-          child: AppBar(
-            centerTitle: true,
-            title: const Text(
-              'H0B1',
-              style: TextStyle(
-                fontSize: 20,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            backgroundColor: Colors.deepPurple,
-            leading: IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () {
-                // Add navigation drawer functionality
-              },
-            ),
-          ),
-        ),
-        bottomNavigationBar: const BottomBar(),
-        body: const Center(
-          child: Text('Welcome to H0B1'),
-        ),
+// Yerel bildirim gösterme fonksiyonu
+void showFlutterNotification(RemoteMessage message) {
+  flutterLocalNotificationsPlugin.show(
+    message.hashCode,
+    message.notification?.title,
+    message.notification?.body,
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        channel.id,
+        channel.name,
+        channelDescription: channel.description,
+        icon: 'launch_background',
       ),
-    );
-  }
-}*/
-
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    ),
+  );
+}

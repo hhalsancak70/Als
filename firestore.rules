@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Kullanıcı dokümanları için kurallar
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Blog yorumları için kurallar
+    match /blog_comments/{commentId} {
+      allow read, write: if true;
+      
+      // Alt yorumlar (replies) için kurallar
+      match /replies/{replyId} {
+        allow read, write: if true;
+      }
+    }
+    
+    // Post ve yorumları için kurallar
+    match /posts/{postId} {
+      allow read: if true;
+      allow write, update, delete: if request.auth != null;
+      
+      // Post yorumları için kurallar
+      match /comments/{commentId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Beğeniler için kurallar
+    match /likes/{likeId} {
+      allow read, write: if true;
+    }
+
+    // FCM token'ları için kurallar
+    match /fcm_tokens/{tokenId} {
+      allow read, write: if true;
+    }
+
+    // Bildirimler için kurallar
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    // Bloglar için kurallar
+    match /blogs/{blogId} {
+      allow read, write: if true;
+    }
+
+    // Ürünler için kurallar
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Sepet koleksiyonu için kurallar
+    match /carts/{cartId} {
+      allow read, write: if true;
+    }
+
+    // Favoriler koleksiyonu için kurallar
+    match /favorites/{favoriteId} {
+      allow read, write: if true;
+    }
+  }
+}
+

@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(
+//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Profil fotoğrafları için kurallar
+    match /profile_photos/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                  request.auth.uid == userId &&
+                  request.resource.size < 5 * 1024 * 1024 && // 5MB limit
+                  request.resource.contentType.matches('image/.*');
+    }
+    
+    // Ürün fotoğrafları için kurallar
+    match /products/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+                  request.resource.size < 10 * 1024 * 1024 && // 10MB limit
+                  request.resource.contentType.matches('image/.*');
+    }
+    
+    // Post fotoğrafları için kurallar
+    match /posts/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+                  request.resource.size < 10 * 1024 * 1024 && // 10MB limit
+                  request.resource.contentType.matches('image/.*');
+    }
+    
+    // Blog görselleri için kurallar
+    match /blogs/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+                  request.resource.size < 10 * 1024 * 1024 && // 10MB limit
+                  request.resource.contentType.matches('image/.*');
+    }
+    
+    // Genel dosyalar için kurallar
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Varsayılan olarak tüm diğer erişimleri reddet
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
