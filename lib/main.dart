@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hobby/Screens/BottomBar.dart';
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:provider/provider.dart';
+import 'package:hobby/Model/theme_notifier.dart';
 
 // Global değişkenler
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -87,7 +89,12 @@ void main() async {
     }
   });
 
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeNotifier(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -95,28 +102,50 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Hobby',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return Consumer<ThemeNotifier>(
+      builder: (context, themeNotifier, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Hobby',
+          theme: ThemeData(
+            primarySwatch: Colors.deepPurple,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            bottomAppBarTheme: const BottomAppBarTheme(
+              color: Colors.deepPurple,
+            ),
+          ),
+          darkTheme: ThemeData.dark().copyWith(
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
+            bottomAppBarTheme: const BottomAppBarTheme(
+              color: Colors.black,
+            ),
+          ),
+          themeMode:
+              themeNotifier.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          home: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          // Kullanıcı oturum açmışsa
-          if (snapshot.hasData) {
-            return const BottomBar();
-          }
+              // Kullanıcı oturum açmışsa
+              if (snapshot.hasData) {
+                return const BottomBar(); // BottomBar yapısını koruyoruz
+              }
 
-          // Kullanıcı oturum açmamışsa
-          return const IntroPage();
-        },
-      ),
+              // Kullanıcı oturum açmamışsa
+              return const IntroPage();
+            },
+          ),
+        );
+      },
     );
   }
 }
