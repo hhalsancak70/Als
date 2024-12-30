@@ -53,13 +53,20 @@ class _ProductPostingScreenState extends State<ProductPostingScreen> {
       final imageUrl = await ref.getDownloadURL();
 
       // Ürün bilgilerini kaydet
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final userData = userDoc.data();
+
       await FirebaseFirestore.instance.collection('products').add({
         'title': _titleController.text,
         'description': _descriptionController.text,
         'price': double.parse(_priceController.text),
         'imageUrl': imageUrl,
         'sellerId': user.uid,
-        'sellerName': user.displayName ?? 'Anonim',
+        'sellerName': userData?['username'] ?? 'Anonim',
+        'sellerPhotoURL': userData?['photoURL'] ?? user.photoURL,
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'active',
       });

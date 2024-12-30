@@ -1,13 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hobby/Screens/Blogging.dart';
 import 'package:hobby/Screens/Home.dart';
-import 'package:hobby/Screens/Intro.dart';
 import 'package:hobby/Screens/News.dart';
 import 'package:hobby/Screens/Profile.dart';
 import 'package:hobby/Screens/ShoppingScreen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hobby/Screens/SettingsScreen.dart';
+import 'package:hobby/Screens/MessagesScreen.dart';
 
 class BottomBar extends StatefulWidget {
   const BottomBar({super.key});
@@ -25,6 +23,7 @@ class _BottomBarState extends State<BottomBar> {
     const BloggingScreen(),
     const NewsScreen(),
     const ShoppingScreen(),
+    const MessagesScreen(),
     const SettingsScreen(),
   ];
 
@@ -54,26 +53,13 @@ class _BottomBarState extends State<BottomBar> {
           ),
         ),
         actions: [
-          // Add the logout button to the top right
+          // Mesajlaşma butonu
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.deepPurple),
-            onPressed: () async {
-              // Clear Firebase session (sign out)
-              await FirebaseAuth.instance.signOut();
-
-              // Clear stored credentials from SharedPreferences
-              final SharedPreferences prefs =
-                  await SharedPreferences.getInstance();
-              await prefs.remove('email');
-              await prefs.remove('password');
-              await prefs.remove('remember_me');
-
-              // Navigate to the SignIn or IntroPage
-              if (!mounted) return; // Ensures context is still valid
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const IntroPage()),
-              );
+            icon: const Icon(Icons.message),
+            onPressed: () {
+              setState(() {
+                _selectedIndex = 4; // MessagesScreen indeksi
+              });
             },
           ),
         ],
@@ -84,19 +70,18 @@ class _BottomBarState extends State<BottomBar> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            // Smaller Drawer Header with reduced space
+            // Drawer Header
             Container(
-              height: 75, // Adjust the height to your preference
+              height: 75,
               color: Colors.deepPurple[200],
               child: DrawerHeader(
                 decoration: BoxDecoration(
                   color: Colors.deepPurple[200],
                 ),
-                margin: EdgeInsets
-                    .zero, // Remove any margin around the DrawerHeader
-                padding: EdgeInsets.zero, // Adjust padding as needed
+                margin: EdgeInsets.zero,
+                padding: EdgeInsets.zero,
                 child: const Align(
-                  alignment: Alignment.center, // Align text to the bottom-left
+                  alignment: Alignment.center,
                   child: Text(
                     'Menu',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -104,6 +89,7 @@ class _BottomBarState extends State<BottomBar> {
                 ),
               ),
             ),
+
             // Profile Item
             ListTile(
               leading: const Icon(Icons.person),
@@ -123,12 +109,10 @@ class _BottomBarState extends State<BottomBar> {
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
               onTap: () {
-                // Handle Settings navigation here
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const SettingsScreen()),
-                );
+                setState(() {
+                  _selectedIndex = 5;
+                });
+                Navigator.pop(context);
               },
             ),
           ],

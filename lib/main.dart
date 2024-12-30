@@ -9,6 +9,10 @@ import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 import 'package:hobby/Model/theme_notifier.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hobby/Screens/SignIn.dart';
+import 'package:hobby/Screens/Register.dart';
 
 // Global değişkenler
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -31,42 +35,59 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Yerel bildirimleri başlat
-  await flutterLocalNotificationsPlugin.initialize(
-    const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      iOS: DarwinInitializationSettings(),
-    ),
-  );
-
-  // Android için bildirim kanalını oluştur
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(channel);
-
   // Firebase'i başlat
   await Firebase.initializeApp();
+
+  // Debug modunda App Check'i yapılandır
+  if (kDebugMode) {
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.debug,
+    );
+  } else {
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.playIntegrity,
+    );
+  }
+
+  // Firestore önbellek ayarları
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
 
   // FCM arka plan işleyicisini ayarla
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Bildirim izinlerini iste
   final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(
+  NotificationSettings settings = await messaging.requestPermission(
     alert: true,
     badge: true,
     sound: true,
+    provisional: false,
+    announcement: true,
+    carPlay: true,
+    criticalAlert: true,
   );
+
+  print('Kullanıcı izin durumu: ${settings.authorizationStatus}');
 
   // FCM token'ı al ve Firestore'a kaydet
   String? token = await messaging.getToken();
   if (token != null) {
-    await FirebaseFirestore.instance.collection('fcm_tokens').doc(token).set({
-      'token': token,
-      'createdAt': FieldValue.serverTimestamp(),
-      'platform': Platform.operatingSystem,
-    });
+    print('FCM Token: $token'); // Debug için token'ı yazdır
+
+    // Token'ı Firestore'a kaydet
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'fcmToken': token,
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+      });
+    }
   }
 
   // Token yenilendiğinde güncelle
@@ -125,6 +146,24 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Hobby',
+          initialRoute: '/',
+          routes: {
+            '/': (context) => StreamBuilder<User?>(
+                  stream: FirebaseAuth.instance.authStateChanges(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasData) {
+                      return const BottomBar();
+                    }
+                    return const IntroPage();
+                  },
+                ),
+            '/login': (context) => const SignIn(),
+            '/register': (context) => const RegisterScreen(),
+            '/home': (context) => const BottomBar(),
+          },
           theme: ThemeData(
             // Ana renkler
             primarySwatch: Colors.deepPurple,
@@ -194,22 +233,6 @@ class MyApp extends StatelessWidget {
           ),
           themeMode:
               themeNotifier.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          home: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              // Kullanıcı oturum açmışsa
-              if (snapshot.hasData) {
-                return const BottomBar(); // BottomBar yapısını koruyoruz
-              }
-
-              // Kullanıcı oturum açmamışsa
-              return const IntroPage();
-            },
-          ),
         );
       },
     );

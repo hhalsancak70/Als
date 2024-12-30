@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hobby/Model/feed_item.dart'; // PostUser sınıfı için import
 import 'package:hobby/Screens/PhotoCommentScreen.dart';
 import 'package:hobby/Screens/UserProfileScreen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String? _selectedHobbyFilter;
+  Stream<List<FeedItem>>? _feedStream;
 
   // Sınıf seviyesinde hobi listesini tanımlayalım
   final List<Map<String, String>> _defaultHobbies = [
@@ -33,18 +35,35 @@ class _HomeScreenState extends State<HomeScreen> {
     {'id': 'sports', 'name': 'Spor'},
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _updateFeedStream();
+  }
+
+  void _updateFeedStream() {
+    _feedStream = _getFeedItems();
+  }
+
+  // Filtre değiştiğinde stream'i güncelle
+  void _onHobbyFilterChanged(String? hobbyId) {
+    setState(() {
+      _selectedHobbyFilter = hobbyId;
+      _feedStream = _getFeedItems();
+    });
+  }
+
   Stream<List<FeedItem>> _getFeedItems() {
     Query<Map<String, dynamic>> query = _firestore.collection('posts');
 
     if (_selectedHobbyFilter != null && _selectedHobbyFilter != 'all') {
-      query = query
-          .where('hobby', isEqualTo: _selectedHobbyFilter)
-          .orderBy('createdAt', descending: true);
-    } else {
-      query = query.orderBy('createdAt', descending: true);
+      query = query.where('hobby', isEqualTo: _selectedHobbyFilter);
     }
 
-    return query.snapshots().map((snapshot) {
+    return query
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return FeedItem(
@@ -93,6 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final likeDoc = await likeRef.get();
+      final postDoc = await postRef.get();
+      final postData = postDoc.data();
+
       if (likeDoc.exists) {
         // Beğeniyi kaldır
         await likeRef.delete();
@@ -109,6 +131,22 @@ class _HomeScreenState extends State<HomeScreen> {
         await postRef.update({
           'likesCount': FieldValue.increment(1),
         });
+
+        // Post sahibine bildirim gönder
+        if (postData?['userId'] != userId) {
+          // Kendi postunu beğenmişse bildirim gönderme
+          await _firestore.collection('notifications').add({
+            'recipientId': postData?['userId'],
+            'senderId': userId,
+            'senderName': _auth.currentUser?.displayName ?? 'Anonim',
+            'type': 'like',
+            'title': 'Yeni Beğeni',
+            'body':
+                '${_auth.currentUser?.displayName ?? 'Anonim'} gönderinizi beğendi',
+            'createdAt': FieldValue.serverTimestamp(),
+            'read': false,
+          });
+        }
       }
     } catch (e) {
       print('Beğeni hatası: $e');
@@ -156,6 +194,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (user == null) return;
 
     try {
+      // Gönderi bilgilerini al
+      final postDoc = await _firestore.collection('posts').doc(postId).get();
+      final postData = postDoc.data();
+
       await _firestore.collection('post_comments').add({
         'postId': postId,
         'userId': user.uid,
@@ -168,6 +210,21 @@ class _HomeScreenState extends State<HomeScreen> {
       await _firestore.collection('posts').doc(postId).update({
         'commentsCount': FieldValue.increment(1),
       });
+
+      // Post sahibine bildirim gönder
+      if (postData?['userId'] != user.uid) {
+        // Kendi postuna yorum yapmışsa bildirim gönderme
+        await _firestore.collection('notifications').add({
+          'recipientId': postData?['userId'],
+          'senderId': user.uid,
+          'senderName': user.displayName ?? 'Anonim',
+          'type': 'comment',
+          'title': 'Yeni Yorum',
+          'body': '${user.displayName ?? 'Anonim'} gönderinize yorum yaptı',
+          'createdAt': FieldValue.serverTimestamp(),
+          'read': false,
+        });
+      }
     } catch (e) {
       print('Yorum ekleme hatası: $e');
     }
@@ -176,14 +233,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Hobby',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.deepPurple.shade50,
-        elevation: 0,
-      ),
       body: Column(
         children: [
           // Hobi filtreleri
@@ -209,9 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     selected: isSelected,
                     label: Text(hobby['name']!),
                     onSelected: (bool selected) {
-                      setState(() {
-                        _selectedHobbyFilter = selected ? hobby['id'] : null;
-                      });
+                      _onHobbyFilterChanged(selected ? hobby['id'] : null);
                     },
                     selectedColor: Colors.deepPurple.shade200,
                     checkmarkColor: Colors.white,
@@ -228,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // Post listesi
           Expanded(
             child: StreamBuilder<List<FeedItem>>(
-              stream: _getFeedItems(),
+              stream: _feedStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(child: Text('Hata: ${snapshot.error}'));
@@ -338,45 +385,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Fotoğraf
           if (item.imageUrl != null)
-            Container(
-              constraints: const BoxConstraints(
-                maxHeight: 400,
-              ),
-              width: double.infinity,
-              child: Image.network(
-                item.imageUrl!,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: item.imageUrl!,
+                height: 300,
+                width: double.infinity,
                 fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 300,
-                    color: Colors.grey[200],
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                            : null,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.deepPurple),
-                      ),
+                placeholder: (context, url) => Container(
+                  height: 300,
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.deepPurple),
                     ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 300,
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: Icon(
-                        Icons.error_outline,
-                        color: Colors.grey,
-                        size: 50,
-                      ),
-                    ),
-                  );
-                },
-                cacheWidth: 800, // Resim önbelleğe alınırken boyutunu sınırla
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  height: 300,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.error),
+                ),
+                memCacheHeight: 800, // Cache boyutunu optimize et
+                memCacheWidth: 800,
               ),
             ),
 

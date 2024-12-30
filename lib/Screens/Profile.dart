@@ -6,6 +6,8 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:hobby/Widgets/hobby_selection_dialog.dart';
+import 'package:hobby/Screens/UserBlogsScreen.dart';
+import 'package:hobby/Screens/UserPostsScreen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -183,31 +185,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Column(
-                            children: [
-                              Text(
-                                '${stats['postCount']}',
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => UserPostsScreen(
+                                      userId: _auth.currentUser!.uid),
                                 ),
-                              ),
-                              const Text('Gönderiler'),
-                            ],
+                              );
+                            },
+                            child: Column(
+                              children: [
+                                Text(
+                                  '${stats['postCount']}',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Text('Gönderi'),
+                              ],
+                            ),
                           ),
-                          Column(
-                            children: [
-                              Text(
-                                '${stats['blogCount']}',
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => UserBlogsScreen(
+                                      userId: _auth.currentUser!.uid),
                                 ),
-                              ),
-                              const Text('Bloglar'),
-                            ],
+                              );
+                            },
+                            child: Column(
+                              children: [
+                                Text(
+                                  '${stats['blogCount']}',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const Text('Blog'),
+                              ],
+                            ),
                           ),
                         ],
                       ),

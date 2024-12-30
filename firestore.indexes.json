@@ -5,7 +5,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "hobby",
+          "fieldPath": "userId",
           "order": "ASCENDING"
         },
         {
@@ -15,11 +15,25 @@
       ]
     },
     {
+      "collectionGroup": "chats",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "participants",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "lastMessageTime",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "blogs",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "hobby",
+          "fieldPath": "authorId",
           "order": "ASCENDING"
         },
         {

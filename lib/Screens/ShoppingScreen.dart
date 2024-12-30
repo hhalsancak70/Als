@@ -73,12 +73,18 @@ class ShoppingScreen extends StatelessWidget {
                         );
                       },
                       child: Card(
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: Container(
                                 decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(12)),
                                   image: DecorationImage(
                                     image: NetworkImage(product['imageUrl']),
                                     fit: BoxFit.cover,
@@ -99,6 +105,30 @@ class ShoppingScreen extends StatelessWidget {
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 12,
+                                        backgroundImage: NetworkImage(
+                                          product['sellerPhotoURL'] ??
+                                              'assets/Images/default_avatar.png',
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          product['sellerName'] ?? 'Anonim',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(

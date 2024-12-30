@@ -15,130 +15,75 @@ class _PostingBlogState extends State<PostingBlog> {
   final TextEditingController _contentController = TextEditingController();
   String? _selectedHobby; // Hobi seçimi için ekle
 
-  // Firebase Instances
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
   // Loading State
   bool _isLoading = false;
 
-  Future<void> _sendNotification(String title, String author) async {
+  Future<void> _submitBlog() async {
+    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lütfen tüm alanları doldurun')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
     try {
-      final currentUser = _auth.currentUser;
-      if (currentUser == null) return;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('Kullanıcı oturum açmamış');
 
-      // Tüm kullanıcıları al
-      final usersSnapshot = await _firestore.collection('users').get();
+      // Kullanıcı bilgilerini Firestore'dan al
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final userData = userDoc.data();
 
+      // Blog bilgilerini kaydet
+      await FirebaseFirestore.instance.collection('blogs').add({
+        'authorId': user.uid,
+        'username': userData?['username'] ?? 'Anonim',
+        'title': _titleController.text,
+        'content': _contentController.text,
+        'hobby': _selectedHobby,
+        'postedOn': FieldValue.serverTimestamp(),
+        'authorPhotoURL': userData?['photoURL'] ??
+            user.photoURL, // Profil fotoğrafını da ekle
+        'likes': 0,
+        'comments': 0,
+      });
+
+      // Tüm kullanıcılara bildirim gönder
+      final usersSnapshot =
+          await FirebaseFirestore.instance.collection('users').get();
       for (var userDoc in usersSnapshot.docs) {
-        // Kendine bildirim gönderme
-        if (userDoc.id != currentUser.uid) {
-          // Bildirim dokümanı oluştur
-          await _firestore.collection('notifications').add({
+        if (userDoc.id != user.uid) {
+          await FirebaseFirestore.instance.collection('notifications').add({
             'recipientId': userDoc.id,
-            'senderId': currentUser.uid,
-            'senderName': author,
+            'senderId': user.uid,
+            'senderName': userData?['username'] ?? 'Anonim',
             'type': 'blog',
             'title': 'Yeni Blog Yazısı',
-            'body': '$author yeni bir blog paylaştı: $title',
+            'body':
+                '${userData?['username'] ?? 'Anonim'} yeni bir blog paylaştı',
             'createdAt': FieldValue.serverTimestamp(),
             'read': false,
           });
-
-          // FCM token'ı al ve bildirim gönder
-          final userData = userDoc.data();
-          if (userData['fcmToken'] != null) {
-            await _firestore.collection('fcm_tokens').add({
-              'token': userData['fcmToken'],
-              'title': 'Yeni Blog Yazısı',
-              'body': '$author yeni bir blog paylaştı: $title',
-              'timestamp': FieldValue.serverTimestamp(),
-            });
-          }
         }
       }
-      print('Bildirimler başarıyla gönderildi');
-    } catch (e) {
-      print('Bildirim gönderme hatası: $e');
-    }
-  }
 
-  Future<void> _submitPost() async {
-    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in both the title and content'),
-        ),
-      );
-      return;
-    }
-
-    if (_titleController.text.length < 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title must be at least 5 characters')),
-      );
-      return;
-    }
-
-    if (_contentController.text.length < 20) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Content must be at least 20 characters')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Get current user
-      final User? user = _auth.currentUser;
-      if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You must be logged in to post a blog')),
-        );
-        return;
-      }
-
-      // Fetch author details
-      final String author = user.displayName ?? user.email ?? 'Unknown User';
-      final String authorId = user.uid;
-
-      // Add blog post to Firestore
-      await _firestore.collection('blogs').add({
-        'title': _titleController.text,
-        'content': _contentController.text,
-        'author': author,
-        'authorId': authorId,
-        'hobby': _selectedHobby, // Hobi bilgisini ekle
-        'postedOn': DateTime.now().toIso8601String(),
-      });
-
-      // Blog ekledikten sonra bildirim gönder
-      await _sendNotification(
-        _titleController.text,
-        user.displayName ?? 'Anonim',
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Blog posted successfully!')),
-      );
-
-      // Clear text fields
-      _titleController.clear();
-      _contentController.clear();
-
-      // Navigate back or to a blogs list page
+      if (!mounted) return;
       Navigator.pop(context);
-    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to post blog: $e')),
+        const SnackBar(content: Text('Blog başarıyla paylaşıldı')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Blog paylaşılırken hata oluştu: $e')),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -242,7 +187,7 @@ class _PostingBlogState extends State<PostingBlog> {
                   ),
                   Center(
                     child: ElevatedButton(
-                      onPressed: _submitPost,
+                      onPressed: _submitBlog,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepPurple,
                         foregroundColor: Colors.white,

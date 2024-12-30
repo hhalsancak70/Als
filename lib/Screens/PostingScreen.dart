@@ -24,7 +24,12 @@ class _PostingScreenState extends State<PostingScreen> {
 
   Future<void> _pickMedia(ImageSource source) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source);
+    final pickedFile = await picker.pickImage(
+      source: source,
+      maxWidth: 1200,
+      maxHeight: 1200,
+      imageQuality: 85,
+    );
 
     if (pickedFile != null) {
       setState(() {
@@ -64,7 +69,7 @@ class _PostingScreenState extends State<PostingScreen> {
       // Firestore'a post bilgilerini kaydet
       await _firestore.collection('posts').add({
         'userId': currentUser.uid,
-        'userName': userData?['name'] ?? currentUser.displayName ?? 'Anonim',
+        'userName': userData?['username'] ?? 'Anonim',
         'userImage': userData?['photoURL'] ?? currentUser.photoURL,
         'content': _captionController.text,
         'imageUrl': downloadUrl,
@@ -75,24 +80,23 @@ class _PostingScreenState extends State<PostingScreen> {
       });
 
       // Tüm kullanıcılara bildirim gönder
-      await _firestore.collection('users').get().then((users) {
-        for (var user in users.docs) {
-          if (user.id != currentUser.uid) {
-            // Kendine bildirim gönderme
-            _firestore.collection('notifications').add({
-              'recipientId': user.id,
-              'senderId': currentUser.uid,
-              'senderName': currentUser.displayName ?? 'Anonim',
-              'type': 'post',
-              'title': 'Yeni Gönderi',
-              'body':
-                  '${currentUser.displayName ?? 'Anonim'} yeni bir fotoğraf paylaştı',
-              'createdAt': FieldValue.serverTimestamp(),
-              'read': false,
-            });
-          }
+      final usersSnapshot = await _firestore.collection('users').get();
+      for (var userDoc in usersSnapshot.docs) {
+        if (userDoc.id != currentUser.uid) {
+          // Kendine bildirim gönderme
+          await _firestore.collection('notifications').add({
+            'recipientId': userDoc.id,
+            'senderId': currentUser.uid,
+            'senderName': userData?['username'] ?? 'Anonim',
+            'type': 'post',
+            'title': 'Yeni Fotoğraf',
+            'body':
+                '${userData?['username'] ?? 'Anonim'} yeni bir fotoğraf paylaştı',
+            'createdAt': FieldValue.serverTimestamp(),
+            'read': false,
+          });
         }
-      });
+      }
 
       if (!mounted) return;
       Navigator.pop(context);
