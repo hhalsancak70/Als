@@ -224,10 +224,10 @@ This project is licensed under the [MIT License](LICENSE).
 
 Proje Sahibi - [@hhalsancak70](https://github.com/hhalsancak70) - alsancak0370@gmail.com and [@Erenakdogan](https://github.com/Erenakdogan) - erenakdogan11@outlook.com
 
-Proje Linki: [https://github.com/hhalsancak70/als](https://github.com/hhalsancak70/als)
+Proje Linki: [https://github.com/hhalsancak70/als](https://github.com/hhalsancak70/Hobby)
 
 **🇬🇧 English**
 
 Project Owner - [@hhalsancak70](https://github.com/hhalsancak70) - alsancak0370@gmail.com and [@Erenakdogan](https://github.com/Erenakdogan) - erenakdogan11@outlook.com
 
-Project Link: [https://github.com/hhalsancak70/als](https://github.com/hhalsancak70/als)
+Project Link: [https://github.com/hhalsancak70/als](https://github.com/hhalsancak70/Hobby)
