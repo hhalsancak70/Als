@@ -6,8 +6,7 @@ import 'package:http/http.dart' as http;
 class NewsApi {
   List<NewsModel> dataStore = [];
   Future<void> getNews() async {
-    Uri url = Uri.parse(
-        'https://newsapi.org/v2/top-headlines?country=us&apiKey=c30fb3b725da4a1fa66d8311205c724d');
+    Uri url = Uri.parse('Api');
     var response = await http.get(url);
     var jsonData = jsonDecode(response.body);
     if (jsonData["status"] == "ok") {
@@ -33,8 +32,7 @@ class NewsApi {
 class CategoryNews {
   List<NewsModel> dataStore = [];
   Future<void> getNews(String category) async {
-    Uri url = Uri.parse(
-        'https://newsapi.org/v2/top-headlines?country=us&category=$category&apiKey=c30fb3b725da4a1fa66d8311205c724d');
+    Uri url = Uri.parse('api');
     var response = await http.get(url);
     var jsonData = jsonDecode(response.body);
     if (jsonData["status"] == "ok") {
